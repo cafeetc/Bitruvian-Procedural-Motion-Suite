@@ -59,9 +59,9 @@ export const Mannequin: React.FC<MannequinProps> = ({
   const structureFill = isCore ? palette.coreStructureFill : palette.legacyFill;
   const frontLimbFill = isCore ? palette.coreFrontFill : palette.legacyFill;
   const backLimbFill = isCore ? palette.coreBackFill : palette.legacyFill;
-  const collarFill = isCore ? palette.oliveCollarFill : palette.legacyFill;
-  const collarStroke = isCore ? palette.oliveCollarStroke : palette.legacyStroke;
   const baseStroke = isCore ? palette.coreStroke : palette.legacyStroke;
+  const collarFill = structureFill;
+  const collarStroke = baseStroke;
 
   const v = (coreVariant: BoneVariant, legacyVariant: BoneVariant): BoneVariant =>
     isCore ? coreVariant : legacyVariant;
@@ -159,13 +159,12 @@ export const Mannequin: React.FC<MannequinProps> = ({
             fillColor={collarFill}
             strokeColor={collarStroke}
             showLabel={showLabels}
-            label={isCore ? 'Collar [Parent]' : 'Collar'}
+            label="Collar"
             boneKey="collar"
             proportionKey="collar"
             onAnchorMouseDown={onAnchorMouseDown}
             isBeingDragged={draggingBoneKey === 'collar'}
             isHovered={hoveredBoneKey === 'collar'}
-            isCollarHub={isCore}
             {...commonStyleProps}
           >
             {/* HEAD (Child of Olive Collar) */}

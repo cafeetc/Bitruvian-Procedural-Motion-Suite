@@ -2,6 +2,29 @@ import React from 'react';
 
 export type ModelVersion = 'core' | 'legacy';
 export type ThemeMode = 'light' | 'dark';
+export type RibAnchorMode = 'upper' | 'lower' | 'ribwings';
+export type HeadTurnStep = 0 | 1 | 2 | 3;
+export type RigVisualMode = 'analog' | 'digital';
+export type GotzHandPresetName =
+  | 'Dynamic'
+  | 'Neutral'
+  | 'Grip'
+  | 'Open'
+  | 'Fist'
+  | 'Point'
+  | 'Peace'
+  | 'Rock'
+  | 'Pinch'
+  | 'Flat';
+
+export type WalkPerspectiveMode = 'front' | 'back_3p' | 'side_balance';
+
+export interface PerspectiveState {
+  enabled: boolean;
+  vpX: number;      // Vanishing point X in SVG stage coordinates (center = 0)
+  horizonY: number; // Horizon Y in SVG stage coordinates (visualFloorY = 500)
+  strength: number; // 0..1.5 perspective projection depth cue
+}
 
 export enum PartName {
   Torso = 'torso',
@@ -130,6 +153,7 @@ export type WalkingEnginePivotOffsets = {
   l_shoulder: number; r_shoulder: number;
   l_elbow: number; r_elbow: number;
   l_hand: number; r_hand: number;
+  l_fingers: number; r_fingers: number;
   l_hip: number; r_hip: number;
   l_knee: number; r_knee: number;
   l_foot: number; r_foot: number;

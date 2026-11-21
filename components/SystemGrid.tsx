@@ -1,5 +1,5 @@
 import React from 'react';
-import { ModelVersion, ThemeMode, Vector2D } from '../types';
+import { ModelVersion, PerspectiveState, ThemeMode, Vector2D } from '../types';
 import { ANATOMY_RAW_RELATIVE_TO_BASE_HEAD_UNIT, GROUND_STRIP_HEIGHT_RAW_H_UNIT, STAGE_PALETTES } from '../constants';
 
 interface AdvancedGridProps {
@@ -15,6 +15,16 @@ interface SystemGuidesProps {
   modelVersion: ModelVersion;
   lPlanted?: boolean;
   rPlanted?: boolean;
+  lFootX?: number;
+  rFootX?: number;
+  lWeight?: number;
+  rWeight?: number;
+  lRoadOffsetY?: number;
+  rRoadOffsetY?: number;
+  focalX?: number;
+  perspective?: PerspectiveState;
+  onPerspMouseDown?: (target: 'vp' | 'horizon', e: React.MouseEvent) => void;
+  draggingPersp?: 'vp' | 'horizon' | null;
 }
 
 export const Scanlines: React.FC = () => (
@@ -78,6 +88,16 @@ export const SystemGuides: React.FC<SystemGuidesProps> = ({
   modelVersion,
   lPlanted = false,
   rPlanted = false,
+  lFootX = 52,
+  rFootX = -52,
+  lWeight = 0.5,
+  rWeight = 0.5,
+  lRoadOffsetY = 0,
+  rRoadOffsetY = 0,
+  focalX = 0,
+  perspective,
+  onPerspMouseDown,
+  draggingPersp = null,
 }) => {
   const palette = STAGE_PALETTES[theme];
   const isLightCore = theme === 'light' && modelVersion === 'core';
@@ -86,8 +106,75 @@ export const SystemGuides: React.FC<SystemGuidesProps> = ({
   const groundStripWidth = ANATOMY_RAW_RELATIVE_TO_BASE_HEAD_UNIT.FOOT * baseUnitH * 6.5;
   const groundStripX = -groundStripWidth / 2;
 
+  // 1-point Perspective Grid Geometry (ported from Bitruvian.Human.Puppyt canvasRenderer)
+  const perspOn = !!perspective?.enabled;
+  const vx = perspective?.vpX ?? 0;
+  const vy = perspective?.horizonY ?? -533;
+  const dHG = floorY - vy;
+  const safeHG = Math.abs(dHG) < 18 ? (dHG >= 0 ? 18 : -18) : dHG;
+  const cell = 115;
+  const raysN = 6;
+  const halfSpan = raysN * cell;
+  const kSteps = [-0.36, -0.18, 0.35, 0.85, 1.65, 2.8, 4.5, 7.5];
+
   return (
-    <g className="pointer-events-none system-guides-group">
+    <g className="system-guides-group">
+      {/* 1-Point Perspective Floor Rays & Depth Transversals */}
+      {perspOn && (
+        <g className="pointer-events-none">
+          {Array.from({ length: raysN * 2 + 1 }, (_, idx) => idx - raysN).map((i) => {
+            const gx = focalX + i * cell;
+            const dx = gx - vx;
+            const tEnd = 2.6;
+            const ex = vx + dx * tEnd;
+            const ey = vy + safeHG * tEnd;
+            const isCoreRay = Math.abs(i) <= 1;
+            return (
+              <line
+                key={`p-ray-${i}`}
+                x1={vx}
+                y1={vy}
+                x2={ex}
+                y2={ey}
+                stroke={palette.purpleFlourish}
+                strokeWidth={isCoreRay ? 2.2 : 1.4}
+                opacity={isCoreRay ? 0.24 : 0.12}
+              />
+            );
+          })}
+
+          {kSteps.map((k) => {
+            const yk = vy + safeHG / (1 + k * 0.55);
+            const scale = (yk - vy) / safeHG;
+            if (scale <= 0.03) return null;
+            const xl = vx + (focalX - halfSpan - vx) * scale;
+            const xr = vx + (focalX + halfSpan - vx) * scale;
+            return (
+              <line
+                key={`p-tr-${k}`}
+                x1={xl}
+                y1={yk}
+                x2={xr}
+                y2={yk}
+                stroke={palette.purpleFlourish}
+                strokeWidth={1.4}
+                opacity={k < 0 ? 0.16 : 0.2 / (1 + k * 0.22)}
+              />
+            );
+          })}
+
+          {/* Skeleton Plumb -> Ground Anchor -> Vanishing Point Sightline */}
+          <polyline
+            points={`${focalX},140 ${focalX},${floorY} ${vx},${vy}`}
+            fill="none"
+            stroke={palette.purpleFlourish}
+            strokeWidth={1.6}
+            strokeDasharray="6 8"
+            opacity={0.28}
+          />
+        </g>
+      )}
+
       {/* Center X-axis guide */}
       <line
         x1={-span}
@@ -96,8 +183,9 @@ export const SystemGuides: React.FC<SystemGuidesProps> = ({
         y2="0"
         stroke={isLightCore ? palette.greenFlourish : palette.guideStroke}
         strokeWidth={1}
-        opacity={isLightCore ? 0.16 : 0.25}
+        opacity={isLightCore ? 0.14 : 0.22}
         strokeDasharray="10 8"
+        className="pointer-events-none"
       />
       {/* Center Y-axis plumb line */}
       <line
@@ -107,12 +195,78 @@ export const SystemGuides: React.FC<SystemGuidesProps> = ({
         y2={span}
         stroke={isLightCore ? palette.purpleFlourish : palette.guideStroke}
         strokeWidth={1.1}
-        opacity={isLightCore ? 0.2 : 0.28}
+        opacity={isLightCore ? 0.18 : 0.24}
         strokeDasharray="10 8"
+        className="pointer-events-none"
       />
 
+      {/* Interactive Perspective Horizon & Vanishing Point Handle */}
+      {perspOn && (
+        <g data-no-export="true">
+          <line
+            x1={-span}
+            y1={vy}
+            x2={span}
+            y2={vy}
+            stroke={palette.purpleFlourish}
+            strokeWidth={draggingPersp === 'horizon' ? 3.2 : 2}
+            strokeDasharray="12 9"
+            opacity={draggingPersp === 'horizon' ? 0.72 : 0.34}
+            className={onPerspMouseDown ? 'cursor-ns-resize' : 'pointer-events-none'}
+            onMouseDown={(e) => {
+              if (!onPerspMouseDown) return;
+              e.stopPropagation();
+              onPerspMouseDown('horizon', e);
+            }}
+          />
+          <text
+            x={-440}
+            y={vy - 12}
+            fill={palette.purpleFlourish}
+            fontSize="20"
+            fontFamily="JetBrains Mono, monospace"
+            fontWeight="700"
+            opacity={0.55}
+            className="select-none pointer-events-none uppercase"
+          >
+            Horizon
+          </text>
+          <g
+            className={onPerspMouseDown ? 'cursor-move' : 'pointer-events-none'}
+            onMouseDown={(e) => {
+              if (!onPerspMouseDown) return;
+              e.stopPropagation();
+              onPerspMouseDown('vp', e);
+            }}
+          >
+            <circle
+              cx={vx}
+              cy={vy}
+              r={draggingPersp === 'vp' ? 18 : 13}
+              fill="none"
+              stroke={palette.purpleFlourish}
+              strokeWidth={2.5}
+              opacity={0.65}
+            />
+            <circle cx={vx} cy={vy} r={5.5} fill={palette.purpleFlourish} opacity={0.9} />
+            <text
+              x={vx + 18}
+              y={vy + 6}
+              fill={palette.purpleFlourish}
+              fontSize="20"
+              fontFamily="JetBrains Mono, monospace"
+              fontWeight="700"
+              opacity={0.68}
+              className="select-none pointer-events-none uppercase"
+            >
+              VP
+            </text>
+          </g>
+        </g>
+      )}
+
       {/* Floor guide line and subtle ground strip */}
-      <g>
+      <g className="pointer-events-none">
         <line
           x1={-span}
           y1={floorY}
@@ -130,6 +284,50 @@ export const SystemGuides: React.FC<SystemGuidesProps> = ({
           fill={palette.groundStripFill}
           opacity="0.7"
         />
+
+        {/* Individual Weight-Responsive Foot Contact Ellipses & Road Hitch Relief Markers */}
+        {(lPlanted || lWeight > 0.12) && (
+          <g>
+            <ellipse
+              cx={lFootX}
+              cy={floorY + lRoadOffsetY + 3}
+              rx={28 + lWeight * 46}
+              ry={6 + lWeight * 6}
+              fill={palette.greenFlourish}
+              opacity={(lPlanted ? 0.18 : 0.06) + lWeight * 0.28}
+            />
+            {Math.abs(lRoadOffsetY) > 1.5 && (
+              <path
+                d={`M ${lFootX - 75} ${floorY} Q ${lFootX} ${floorY + lRoadOffsetY * 1.45} ${lFootX + 75} ${floorY}`}
+                fill="none"
+                stroke={palette.purpleFlourish}
+                strokeWidth={2.2}
+                opacity={0.55}
+              />
+            )}
+          </g>
+        )}
+        {(rPlanted || rWeight > 0.12) && (
+          <g>
+            <ellipse
+              cx={rFootX}
+              cy={floorY + rRoadOffsetY + 3}
+              rx={28 + rWeight * 46}
+              ry={6 + rWeight * 6}
+              fill={palette.greenFlourish}
+              opacity={(rPlanted ? 0.18 : 0.06) + rWeight * 0.28}
+            />
+            {Math.abs(rRoadOffsetY) > 1.5 && (
+              <path
+                d={`M ${rFootX - 75} ${floorY} Q ${rFootX} ${floorY + rRoadOffsetY * 1.45} ${rFootX + 75} ${floorY}`}
+                fill="none"
+                stroke={palette.purpleFlourish}
+                strokeWidth={2.2}
+                opacity={0.55}
+              />
+            )}
+          </g>
+        )}
 
         {/* Calibration ruler ticks on the ground strip */}
         {isLightCore && (
@@ -149,21 +347,10 @@ export const SystemGuides: React.FC<SystemGuidesProps> = ({
                 />
               );
             })}
-            {/* Live stance foot-plant contact indicators */}
-            {(lPlanted || rPlanted) && (
-              <line
-                x1={-baseUnitH * 0.8}
-                y1={floorY}
-                x2={baseUnitH * 0.8}
-                y2={floorY}
-                stroke={palette.greenFlourish}
-                strokeWidth="4"
-                strokeLinecap="round"
-              />
-            )}
           </g>
         )}
       </g>
     </g>
   );
 };
+
