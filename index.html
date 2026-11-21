@@ -1,0 +1,161 @@
+<!-- DO NOT DELETE: BITRUVIUS CANONICAL FIGURE v2.0 -->
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bitruvian Walking Emulator</title>
+    <meta name="description" content="A self-aware posing doll, exposing its internal structure and glitches. Focuses on atomic units and bounded evolution of form." />
+    <meta property="og:title" content="Bitruvian Walking Emulator" />
+    <meta property="og:description" content="A self-aware posing doll, exposing its internal structure and glitches. Focuses on atomic units and bounded evolution of form." />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=VT323&display=block" rel="stylesheet">
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            fontFamily: {
+              mono: ['"JetBrains Mono"', 'monospace'],
+              archaic: ['"VT323"', 'monospace'],
+            },
+            colors: {
+              paper: 'rgb(var(--color-paper) / <alpha-value>)',
+              ink: 'rgb(var(--color-ink) / <alpha-value>)',
+              'mono-light': 'rgb(var(--color-mono-light) / <alpha-value>)',
+              'mono-mid': 'rgb(var(--color-mono-mid) / <alpha-value>)',
+              'mono-dark': 'rgb(var(--color-mono-dark) / <alpha-value>)',
+              'mono-darker': 'rgb(var(--color-mono-darker) / <alpha-value>)',
+              selection: 'rgb(var(--color-selection) / <alpha-value>)',
+              'selection-light': 'rgb(var(--color-selection-light) / <alpha-value>)',
+              'selection-super-light': 'rgb(var(--color-selection-super-light) / <alpha-value>)',
+              'limb-highlight': 'rgb(var(--color-limb-highlight) / <alpha-value>)',
+              'accent-purple': 'rgb(var(--color-accent-purple) / <alpha-value>)',
+              'accent-green': 'rgb(var(--color-accent-green) / <alpha-value>)',
+              'accent-red': 'rgb(var(--color-accent-red) / <alpha-value>)',
+              shell: 'rgb(var(--color-shell) / <alpha-value>)',
+              ridge: 'rgb(var(--color-ridge) / <alpha-value>)',
+              'focus-ring': 'rgb(var(--color-focus-ring) / <alpha-value>)',
+              olive: 'rgb(var(--color-olive) / <alpha-value>)',
+            },
+            animation: {
+              'terminal-boot': 'terminal-boot 2s steps(1, end) forwards',
+            },
+            keyframes: {
+              'terminal-boot': {
+                '0%': { opacity: '0' },
+                '10%, 20%, 30%, 50%, 70%, 90%': { opacity: '1' },
+                '15%, 25%, 55%, 75%': { opacity: '0.3' },
+                '100%': { opacity: '0' },
+              }
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      :root {
+        /* Light Mode: Near-white light green canvas with Purple, Emerald, and Magenta-Red accents */
+        --color-paper: 246 252 247;
+        --color-ink: 18 24 21;
+        --color-mono-light: 76 92 82;
+        --color-mono-mid: 60 74 66;
+        --color-mono-dark: 252 255 253;
+        --color-mono-darker: 238 247 240;
+        --color-selection: 109 40 217; /* Royal Purple Flourish */
+        --color-selection-light: 124 58 237;
+        --color-selection-super-light: 237 233 254;
+        --color-limb-highlight: 5 150 105; /* Emerald Green Flourish */
+        --color-accent-purple: 124 58 237;
+        --color-accent-green: 5 150 105;
+        --color-accent-red: 216 27 96; /* Magenta Red */
+        --color-shell: 244 251 246;
+        --color-ridge: 210 227 215;
+        --color-focus-ring: 124 58 237;
+        --color-olive: 91 109 52;
+        --scrollbar-track: #e8f2eb;
+        --scrollbar-thumb: #b2cbb9;
+        --scrollbar-thumb-hover: #7c3aed;
+      }
+
+      .dark {
+        /* Repo Dark Mode Color Scheme */
+        --color-paper: 11 13 18;
+        --color-ink: 241 245 249;
+        --color-mono-light: 148 163 184;
+        --color-mono-mid: 176 186 202;
+        --color-mono-dark: 21 24 33;
+        --color-mono-darker: 16 18 26;
+        --color-selection: 226 232 240;
+        --color-selection-light: 203 213 225;
+        --color-selection-super-light: 35 41 56;
+        --color-limb-highlight: 110 131 64;
+        --color-accent-purple: 167 139 250;
+        --color-accent-green: 52 211 153;
+        --color-accent-red: 240 66 130; /* Magenta Red Dark */
+        --color-shell: 16 18 26;
+        --color-ridge: 39 45 61;
+        --color-focus-ring: 167 139 250;
+        --color-olive: 110 131 64;
+        --scrollbar-track: #10121a;
+        --scrollbar-thumb: #2b3244;
+        --scrollbar-thumb-hover: #475569;
+      }
+
+      html, body {
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+      }
+      body {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background-color: rgb(var(--color-paper));
+        color: rgb(var(--color-ink));
+      }
+      #root {
+        width: 100%;
+        height: 100%;
+      }
+      .custom-scrollbar::-webkit-scrollbar {
+        width: 6px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-track {
+        background: var(--scrollbar-track);
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: var(--scrollbar-thumb);
+        border-radius: 3px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: var(--scrollbar-thumb-hover);
+      }
+      .slider-vertical {
+        -webkit-appearance: slider-vertical;
+        writing-mode: bt-lr;
+      }
+      #orientation-lock-message {
+        display: none !important;
+      }
+    </style>
+    <script type="importmap">
+    {
+      "imports": {
+        "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
+        "react": "https://esm.sh/react@18.3.1",
+        "jszip": "https://esm.sh/jszip@3.10.1",
+        "file-saver": "https://esm.sh/file-saver@2.0.5",
+        "react-dom/": "https://esm.sh/react-dom@18.3.1/",
+        "react/": "https://esm.sh/react@18.3.1/"
+      }
+    }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
